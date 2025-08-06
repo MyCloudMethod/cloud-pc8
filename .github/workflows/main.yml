@@ -38,15 +38,15 @@ jobs:
       run: |
         try {
           Write-Output "`n🧠 CPU:"
-          Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, MaxClockSpeed
+          Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Select-Object Name, NumberOfCores, MaxClockSpeed
 
           Write-Output "`n📂 RAM:"
-          Get-CimInstance Win32_ComputerSystem | ForEach-Object {
+          Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue | ForEach-Object {
             "Total Physical Memory: {0:N2} GB" -f ($_.TotalPhysicalMemory / 1GB)
           }
 
           Write-Output "`n🎮 GPU:"
-          Get-CimInstance Win32_VideoController | Select-Object Name, AdapterRAM
+          Get-WmiObject win32_VideoController -ErrorAction SilentlyContinue | Select-Object Name, AdapterRAM
 
           Write-Output "`n📍 SSD:"
           Get-PSDrive -PSProvider 'FileSystem' | Where-Object {$_.Free -gt 0} | ForEach-Object {
@@ -68,15 +68,20 @@ jobs:
 
     - name: 🖥️ Install dan Jalankan RustDesk
       shell: powershell
+      continue-on-error: true
       run: |
-        $url = "https://github.com/rustdesk/rustdesk/releases/download/1.2.3/rustdesk-1.2.3-windows_x64.zip"
+        $url = "https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-windows_x64.zip"
         $output = "rustdesk.zip"
 
-        Invoke-WebRequest -Uri $url -OutFile $output
+        try {
+          Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
 
-        Expand-Archive -Path $output -DestinationPath rustdesk
+          Expand-Archive -Path $output -DestinationPath rustdesk -Force
 
-        Start-Process -FilePath ".\rustdesk\rustdesk.exe" -ArgumentList "--password ${{ secrets.RUSTDESK_PWD }} --id ${{ secrets.RUSTDESK_ID }}" -NoNewWindow
+          Start-Process -FilePath ".\rustdesk\rustdesk.exe" -ArgumentList "--password ${{ secrets.RUSTDESK_PWD }} --id ${{ secrets.RUSTDESK_ID }}" -NoNewWindow
+        } catch {
+          Write-Output "❌ Gagal install RustDesk: $($_.Exception.Message)"
+        }
 
     - name: 🔓 Buka Port 8080
       shell: powershell
