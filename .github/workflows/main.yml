@@ -34,21 +34,30 @@ jobs:
 
     - name: 🧠 Cek Spesifikasi Hardware
       shell: powershell
+      continue-on-error: true
       run: |
-        Write-Output "`n🧠 CPU:"
-        wmic cpu get Name,NumberOfCores,MaxClockSpeed
+        try {
+          Write-Output "`n🧠 CPU:"
+          Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, MaxClockSpeed
 
-        Write-Output "`n📂 RAM:"
-        systeminfo | findstr /C:"Total Physical Memory"
+          Write-Output "`n📂 RAM:"
+          Get-CimInstance Win32_ComputerSystem | ForEach-Object {
+            "Total Physical Memory: {0:N2} GB" -f ($_.TotalPhysicalMemory / 1GB)
+          }
 
-        Write-Output "`n🎮 GPU:"
-        Get-WmiObject Win32_VideoController | Select-Object Name, AdapterRAM
+          Write-Output "`n🎮 GPU:"
+          Get-CimInstance Win32_VideoController | Select-Object Name, AdapterRAM
 
-        Write-Output "`n📍 SSD:"
-        Get-PSDrive -PSProvider 'FileSystem' | Where-Object {$_.Free -gt 0} | Select-Object Name, Free, Used, @{Name='Total';Expression={$_.Free + $_.Used}}
+          Write-Output "`n📍 SSD:"
+          Get-PSDrive -PSProvider 'FileSystem' | Where-Object {$_.Free -gt 0} | ForEach-Object {
+            "Drive: $($_.Name), Total: $([math]::Round(($_.Free + $_.Used)/1GB, 2)) GB"
+          }
 
-        Write-Output "`n🪟 Windows:"
-        systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+          Write-Output "`n🪟 Windows:"
+          (Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion') | Select-Object ProductName, ReleaseId
+        } catch {
+          Write-Output "❌ Gagal cek spesifikasi: $($_.Exception.Message)"
+        }
 
     - name: 🎮 Clone Unreal Engine (opsional)
       shell: powershell
