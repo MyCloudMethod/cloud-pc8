@@ -9,10 +9,10 @@ jobs:
     timeout-minutes: 360
 
     steps:
-    - name: 🚀 Start Log
-      run: echo "✅ Memulai setup VM dengan RustDesk, UE5, dan tools..."
+    - name: 🚀 Start Setup Log
+      run: echo "✅ Mulai setup VM + RustDesk + UE5 CLI + Tools..."
 
-    - name: 🛠️ Check & Install Chocolatey (Avoid Warning)
+    - name: 🛠️ Cek & Install Chocolatey (hindari warning)
       shell: powershell
       run: |
         if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
@@ -22,18 +22,17 @@ jobs:
           Write-Output "✅ Chocolatey sudah terinstall, lanjut..."
         }
 
-    - - name: 📦 Install Software
-  shell: powershell
-  run: |
-    $ErrorActionPreference = 'Continue'
+    - name: 📦 Install Software
+      shell: powershell
+      run: |
+        $ErrorActionPreference = 'Continue'
+        choco install googlechrome -y --no-progress
+        choco install vscode -y --no-progress
+        choco install obs-studio -y --no-progress
+        choco install 7zip -y --no-progress
+        choco install git -y --no-progress
 
-    choco install googlechrome -y --no-progress
-    choco install vscode -y --no-progress
-    choco install obs-studio -y --no-progress
-    choco install 7zip -y --no-progress
-    choco install git -y --no-progress
-
-    - name: 🧠 Cek Hardware (CPU, RAM, GPU, SSD, OS)
+    - name: 🧠 Cek Spesifikasi Hardware
       shell: powershell
       run: |
         Write-Output "`n🧠 CPU:"
@@ -48,28 +47,28 @@ jobs:
         Write-Output "`n💽 SSD:"
         Get-PSDrive -PSProvider 'FileSystem' | Where-Object {$_.Free -gt 0} | Select-Object Name, Free, Used, @{Name='Total';Expression={$_.Free + $_.Used}}
 
-        Write-Output "`n🪟 OS:"
+        Write-Output "`n🪟 Windows:"
         systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
 
-    - name: 🎮 Clone Unreal Engine Repo (Optional)
+    - name: 🎮 Clone Unreal Engine (opsional)
       shell: powershell
       continue-on-error: true
       run: |
-        Write-Output "⬇️ Attempting to clone UE5 repo (requires EpicGames GitHub access)"
+        Write-Output "⬇️ Clone UE5 repo (butuh akses GitHub EpicGames)"
         git clone https://github.com/EpicGames/UnrealEngine.git ue5
 
-    - name: 🖥️ Install & Run RustDesk
+    - name: 🖥️ Install dan Jalankan RustDesk
       shell: powershell
       run: |
         Invoke-WebRequest -Uri "https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-1.2.3-windows_x64.zip" -OutFile "rustdesk.zip"
         Expand-Archive rustdesk.zip -DestinationPath rustdesk
         Start-Process -FilePath ".\rustdesk\rustdesk.exe" -ArgumentList "--password ${{ secrets.RUSTDESK_PWD }} --id ${{ secrets.RUSTDESK_ID }}" -NoNewWindow
 
-    - name: 🔓 Open Port 8080
+    - name: 🔓 Buka Port 8080
       shell: powershell
       run: |
-        netsh advfirewall firewall add rule name="Open Port 8080" dir=in action=allow protocol=TCP localport=8080
+        netsh advfirewall firewall add rule name="Port 8080" dir=in action=allow protocol=TCP localport=8080
 
-    - name: ⏱️ Keep Alive (6 Jam)
+    - name: ⏱️ Keep Alive 6 Jam
       shell: cmd
       run: timeout /t 21600
