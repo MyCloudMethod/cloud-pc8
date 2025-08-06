@@ -38,13 +38,13 @@ jobs:
         Write-Output "`n🧠 CPU:"
         wmic cpu get Name,NumberOfCores,MaxClockSpeed
 
-        Write-Output "`n💾 RAM:"
+        Write-Output "`n📂 RAM:"
         systeminfo | findstr /C:"Total Physical Memory"
 
         Write-Output "`n🎮 GPU:"
         Get-WmiObject Win32_VideoController | Select-Object Name, AdapterRAM
 
-        Write-Output "`n💽 SSD:"
+        Write-Output "`n📍 SSD:"
         Get-PSDrive -PSProvider 'FileSystem' | Where-Object {$_.Free -gt 0} | Select-Object Name, Free, Used, @{Name='Total';Expression={$_.Free + $_.Used}}
 
         Write-Output "`n🪟 Windows:"
@@ -60,8 +60,13 @@ jobs:
     - name: 🖥️ Install dan Jalankan RustDesk
       shell: powershell
       run: |
-        Invoke-WebRequest -Uri "https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-1.2.3-windows_x64.zip" -OutFile "rustdesk.zip"
-        Expand-Archive rustdesk.zip -DestinationPath rustdesk
+        $url = "https://github.com/rustdesk/rustdesk/releases/download/1.2.3/rustdesk-1.2.3-windows_x64.zip"
+        $output = "rustdesk.zip"
+
+        Invoke-WebRequest -Uri $url -OutFile $output
+
+        Expand-Archive -Path $output -DestinationPath rustdesk
+
         Start-Process -FilePath ".\rustdesk\rustdesk.exe" -ArgumentList "--password ${{ secrets.RUSTDESK_PWD }} --id ${{ secrets.RUSTDESK_ID }}" -NoNewWindow
 
     - name: 🔓 Buka Port 8080
