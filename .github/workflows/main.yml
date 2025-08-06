@@ -22,7 +22,7 @@ jobs:
           Write-Output "✅ Chocolatey sudah terinstall, lanjut..."
         }
 
-    - name: 📦 Install Software
+    - name: 📆 Install Software
       shell: powershell
       run: |
         $ErrorActionPreference = 'Continue'
@@ -53,7 +53,10 @@ jobs:
             "Drive: $($_.Name), Total: $([math]::Round(($_.Free + $_.Used)/1GB, 2)) GB"
           }
 
-          Write-Output "`n🪟 Windows:"
+          Write-Output "`n🩟 HDD:"
+          Get-CimInstance Win32_DiskDrive | Where-Object { $_.MediaType -like '*Fixed hard disk media*' } | Select-Object Model, Size
+
+          Write-Output "`n🗏 Windows:"
           (Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion') | Select-Object ProductName, ReleaseId
         } catch {
           Write-Output "❌ Gagal cek spesifikasi: $($_.Exception.Message)"
@@ -67,7 +70,7 @@ jobs:
         Write-Output "⬇️ Clone UE5 repo (butuh akses GitHub EpicGames)"
         git clone https://github.com/EpicGames/UnrealEngine.git ue5
 
-    - name: 🖥️ Install dan Jalankan RustDesk
+    - name: 💻 Install dan Jalankan RustDesk
       shell: powershell
       continue-on-error: true
       run: |
@@ -79,7 +82,11 @@ jobs:
           Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "rustdesk.zip" -UseBasicParsing
           Expand-Archive -Path "rustdesk.zip" -DestinationPath rustdesk
 
-          Start-Process -FilePath ".\rustdesk\rustdesk.exe" -ArgumentList "--password ${{ secrets.RUSTDESK_PWD }} --id ${{ secrets.RUSTDESK_ID }}" -NoNewWindow
+          Start-Process -FilePath ".\rustdesk\rustdesk.exe" -ArgumentList @(
+            "--connect",
+            "${{ secrets.RUSTDESK_ID }}",
+            "--password", "${{ secrets.RUSTDESK_PWD }}"
+          ) -NoNewWindow
         } catch {
           Write-Output "❌ Gagal install RustDesk: $($_.Exception.Message)"
         }
