@@ -23,9 +23,21 @@ jobs:
         }
 
     - name: 📦 Install Software
-      shell: powershell
-      run: |
-        choco install -y googlechrome vscode obs-studio 7zip git
+  shell: powershell
+  continue-on-error: true
+  run: |
+    $ErrorActionPreference = 'Stop'
+
+    $packages = @("googlechrome", "vscode", "obs-studio", "7zip", "git")
+    
+    foreach ($pkg in $packages) {
+      try {
+        Write-Output "🔧 Installing $pkg..."
+        choco install $pkg -y --no-progress
+      } catch {
+        Write-Output "❗ Failed to install $pkg: $($_.Exception.Message)"
+      }
+    }
 
     - name: 🧠 Cek Hardware (CPU, RAM, GPU, SSD, OS)
       shell: powershell
