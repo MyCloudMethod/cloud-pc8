@@ -38,15 +38,15 @@ jobs:
       run: |
         try {
           Write-Output "`n🧠 CPU:"
-          Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Select-Object Name, NumberOfCores, MaxClockSpeed
+          Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, MaxClockSpeed
 
           Write-Output "`n📂 RAM:"
-          Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue | ForEach-Object {
+          Get-CimInstance Win32_ComputerSystem | ForEach-Object {
             "Total Physical Memory: {0:N2} GB" -f ($_.TotalPhysicalMemory / 1GB)
           }
 
           Write-Output "`n🎮 GPU:"
-          Get-WmiObject win32_VideoController -ErrorAction SilentlyContinue | Select-Object Name, AdapterRAM
+          Get-CimInstance Win32_VideoController | Select-Object Name, AdapterRAM
 
           Write-Output "`n📍 SSD:"
           Get-PSDrive -PSProvider 'FileSystem' | Where-Object {$_.Free -gt 0} | ForEach-Object {
@@ -60,6 +60,7 @@ jobs:
         }
 
     - name: 🎮 Clone Unreal Engine (opsional)
+      if: false # disable step
       shell: powershell
       continue-on-error: true
       run: |
@@ -70,13 +71,13 @@ jobs:
       shell: powershell
       continue-on-error: true
       run: |
-        $url = "https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-windows_x64.zip"
-        $output = "rustdesk.zip"
-
         try {
-          Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
+          $releaseInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/rustdesk/rustdesk/releases/latest" -UseBasicParsing
+          $asset = $releaseInfo.assets | Where-Object { $_.name -like '*windows_x64.zip' } | Select-Object -First 1
+          if (-not $asset) { throw "ZIP untuk Windows tidak ditemukan." }
 
-          Expand-Archive -Path $output -DestinationPath rustdesk -Force
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "rustdesk.zip" -UseBasicParsing
+          Expand-Archive -Path "rustdesk.zip" -DestinationPath rustdesk
 
           Start-Process -FilePath ".\rustdesk\rustdesk.exe" -ArgumentList "--password ${{ secrets.RUSTDESK_PWD }} --id ${{ secrets.RUSTDESK_ID }}" -NoNewWindow
         } catch {
@@ -89,5 +90,9 @@ jobs:
         netsh advfirewall firewall add rule name="Port 8080" dir=in action=allow protocol=TCP localport=8080
 
     - name: ⏱️ Keep Alive 6 Jam
-      shell: cmd
-      run: timeout /t 21600
+      shell: powershell
+      run: |
+        for ($i = 0; $i -lt 216; $i++) {
+          Write-Output "Menjaga agar VM tetap hidup... ($i/216)"
+          Start-Sleep -Seconds 100
+        }
