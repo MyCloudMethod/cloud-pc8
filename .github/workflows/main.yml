@@ -22,22 +22,16 @@ jobs:
           Write-Output "✅ Chocolatey sudah terinstall, lanjut..."
         }
 
-    - name: 📦 Install Software
+    - - name: 📦 Install Software
   shell: powershell
-  continue-on-error: true
   run: |
-    $ErrorActionPreference = 'Stop'
+    $ErrorActionPreference = 'Continue'
 
-    $packages = @("googlechrome", "vscode", "obs-studio", "7zip", "git")
-    
-    foreach ($pkg in $packages) {
-      try {
-        Write-Output "🔧 Installing $pkg..."
-        choco install $pkg -y --no-progress
-      } catch {
-        Write-Output "❗ Failed to install $pkg: $($_.Exception.Message)"
-      }
-    }
+    choco install googlechrome -y --no-progress
+    choco install vscode -y --no-progress
+    choco install obs-studio -y --no-progress
+    choco install 7zip -y --no-progress
+    choco install git -y --no-progress
 
     - name: 🧠 Cek Hardware (CPU, RAM, GPU, SSD, OS)
       shell: powershell
