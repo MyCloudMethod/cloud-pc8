@@ -6,61 +6,64 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 360  # Max GitHub limit (6 jam)
+    timeout-minutes: 360
 
     steps:
     - name: 🚀 Start Log
       run: echo "✅ Memulai setup VM dengan RustDesk, UE5, dan tools..."
 
-    - name: 🛠️ Cek & Install Chocolatey (No Warning)
+    - name: 🛠️ Check & Install Chocolatey (Avoid Warning)
+      shell: powershell
       run: |
         if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
-            Set-ExecutionPolicy Bypass -Scope Process -Force
-            iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
         } else {
-            echo "✅ Chocolatey sudah terinstall, lanjut..."
+          Write-Output "✅ Chocolatey sudah terinstall, lanjut..."
         }
 
-    - name: 📦 Install Software (VSCode, OBS, dll)
+    - name: 📦 Install Software
+      shell: powershell
       run: |
         choco install -y googlechrome vscode obs-studio 7zip git
 
     - name: 🧠 Cek Hardware (CPU, RAM, GPU, SSD, OS)
+      shell: powershell
       run: |
-        echo "`n🧠 CPU:"
+        Write-Output "`n🧠 CPU:"
         wmic cpu get Name,NumberOfCores,MaxClockSpeed
 
-        echo "`n💾 RAM:"
+        Write-Output "`n💾 RAM:"
         systeminfo | findstr /C:"Total Physical Memory"
 
-        echo "`n🎮 GPU:"
+        Write-Output "`n🎮 GPU:"
         Get-WmiObject Win32_VideoController | Select-Object Name, AdapterRAM
 
-        echo "`n💽 SSD:"
+        Write-Output "`n💽 SSD:"
         Get-PSDrive -PSProvider 'FileSystem' | Where-Object {$_.Free -gt 0} | Select-Object Name, Free, Used, @{Name='Total';Expression={$_.Free + $_.Used}}
 
-        echo "`n🪟 OS:"
+        Write-Output "`n🪟 OS:"
         systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
 
-    - name: 🎮 Unreal Engine CLI Clone (Optional)
+    - name: 🎮 Clone Unreal Engine Repo (Optional)
+      shell: powershell
+      continue-on-error: true
       run: |
-        echo "⬇️ Clone Unreal Engine repo (butuh akses GitHub EpicGames)"
-        echo "⚠️ Ini placeholder. Full UE5 build butuh token & setup manual."
-        git clone https://github.com/EpicGames/UnrealEngine.git ue5 || echo "❗ Gagal clone, token mungkin belum ada."
+        Write-Output "⬇️ Attempting to clone UE5 repo (requires EpicGames GitHub access)"
+        git clone https://github.com/EpicGames/UnrealEngine.git ue5
 
-    - name: 🖥️ Install & Jalankan RustDesk
+    - name: 🖥️ Install & Run RustDesk
+      shell: powershell
       run: |
         Invoke-WebRequest -Uri "https://github.com/rustdesk/rustdesk/releases/latest/download/rustdesk-1.2.3-windows_x64.zip" -OutFile "rustdesk.zip"
         Expand-Archive rustdesk.zip -DestinationPath rustdesk
         Start-Process -FilePath ".\rustdesk\rustdesk.exe" -ArgumentList "--password ${{ secrets.RUSTDESK_PWD }} --id ${{ secrets.RUSTDESK_ID }}" -NoNewWindow
 
-    - name: 🔓 Open Port (Contoh: 8080)
+    - name: 🔓 Open Port 8080
+      shell: powershell
       run: |
-        netsh advfirewall firewall add rule name="Port 8080" dir=in action=allow protocol=TCP localport=8080
+        netsh advfirewall firewall add rule name="Open Port 8080" dir=in action=allow protocol=TCP localport=8080
 
-    - name: ⏱️ Keep Alive 6 Jam
+    - name: ⏱️ Keep Alive (6 Jam)
+      shell: cmd
       run: timeout /t 21600
-
-    # Optional: Trigger ulang otomatis (jika kamu buat personal token)
-    #- name: 🔁 Auto Restart (optional - butuh GH_TOKEN)
-    #  run: gh workflow run windows-rdp.yml
